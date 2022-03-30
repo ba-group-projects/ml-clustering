@@ -55,6 +55,11 @@ data.clean$Marital_Status[data.clean$Marital_Status == "Divorced"] <- "4"
 data.clean$Marital_Status[data.clean$Marital_Status == "Widow"] <- "5"
 data.clean$Marital_Status <- as.numeric(data.clean$Marital_Status)
 
+# Adding Age variable (EXPLAIN)
+data.clean$Age <- (2014 - data.clean$Year_Birth)
+
+# Figuring out 'Dt_Customer' dataset
+data.clean$Dt_Customer <- as.Date.numeric(data.clean$Dt_Customer)
 
 
 ######## Factor Analysis ########
