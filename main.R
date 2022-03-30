@@ -67,6 +67,7 @@ data.clean$Dt_Customer <- as.Date.numeric(data.clean$Dt_Customer)
 ### determine the number of factors of FA
 # We want to identify the component of the correlation structure
 
+# Remove Dt_customer for now 
 data.clean$Dt_Customer <- NULL
 
 
@@ -92,14 +93,12 @@ cumsum(fa.eigen$values)/19
 
 # use the scree plot
 plot(fa.eigen$values, type = "b", ylab = "Eigenvalues", xlab = "Factor") # we choose 4
-plot(cumsum(fa.eigen$values)/17, type = "b", ylab = "Eigenvalues", xlab = "Factor") # we choose 4
+# plot(cumsum(fa.eigen$values)/17, type = "b", ylab = "Eigenvalues", xlab = "Factor") # we choose 4
 
-# maybe use 7?
-# Why we use 4
-# Because after 4, the decrease in the eigenvalue is much smaller, therefore we choose 4
 
 ##############################################
 ### factor analysis
+# Choosing 6 as it explains 71.4% of the data
 fa.res = factanal(x = data.clean, factors = 7, rotation = "none") # factor = 4 because of our eigenvalues easlier
 fa.res
 
@@ -112,7 +111,7 @@ fa.res
 
 ##############################################
 ### factor rotation
-fa.res = factanal(x = data.clean, factors = 4, rotation = "promax")
+fa.res = factanal(x = data.clean, factors = 6, rotation = "promax")
 # promax belongs to the oblique rotation?
 
 print(fa.res, cut = 0.2)
@@ -125,3 +124,85 @@ fa.res = factanal(x = data.clean, factors = 7, rotation = "promax", scores = "Ba
 head(fa.res$scores)
 summary(lm(Factor2 ~ Factor1, data = as.data.frame(fa.res$scores)))
 
+
+
+####### PCA ########
+
+
+# # briefly examine the data
+# apply(data.clean, 2, mean)
+# apply(data.clean, 2, var)
+# apply PCA
+
+# Apply PCR to data
+pr.out = prcomp(data.clean, scale = TRUE)
+
+# # trying out PCA with first 7 columns
+# pr.out = prcomp(data.freq, scale = TRUE)
+names(pr.out)
+# have a look at the output
+pr.out$center
+pr.out$scale
+pr.out$rotation
+# get the PC vector
+dim(pr.out$x)
+# plot the PCs
+biplot(pr.out, scale = 0,cex=0.5)
+pr.out$rotation = -pr.out$rotation
+pr.out$x = -pr.out$x
+biplot(pr.out, scale =0,cex=0.5)
+# check the variance explained by each PC
+pr.out$sdev
+pr.var = pr.out$sdev ^2
+pr.var
+# proportion of variance explained
+pve = pr.var/sum(pr.var)
+pve
+cumsum(pve)
+plot(pve, xlab = " Principal Component", ylab = "Proportion of
+Variance Explained", ylim = c(0,1), type = "b")
+
+plot(cumsum(pve), xlab = "Principal Component", ylab ="
+Cumulative Proportion of Variance Explained", ylim = c(0,1),
+     type = "b")
+
+# Plotting PC1 and PC2
+PC1 <- pr.out$rotation[,1]
+
+pca_1_2 <- data.frame(pr.out$x[, 1:2])
+
+plot(pca_1_2[,1], pca_1_2[,2])
+
+"
+PCA - 
+from TDS:
+This plot clearly shows how instead of the 8 columns given to us in the dataset,
+only two were enough to understand we had three different types of pizzas,
+thus making PCA a successful analytical tool to reduce high-dimensional 
+data into a lower one for modelling and analytical purposes.
+
+our_results
+PCA may not be a suitable task, as it is unable for us to clearly understand the 
+number and identity of segments in our customer dataset. 
+
+
+"
+
+# Plotting importance of each variable
+PC1 <- pr.out$rotation[,1]
+PC1_scores <- abs(PC1)
+PC1_scores_ordered <- sort(PC1_scores, decreasing = TRUE)
+names(PC1_scores_ordered)
+
+# Plotting 3d
+# install.packages("scatterplot3d")
+# 
+# library(scatterplot3d)
+
+
+pca_1to3 <- data.frame(pr.out$x[, 1:3])
+scatterplot3d(pca_1to3,
+              main="3D Scatter Plot",
+              xlab = "PCA1",
+              ylab = "PCA2",
+              zlab = "PCA3", angle=60)
