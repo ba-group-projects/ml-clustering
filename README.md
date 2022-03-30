@@ -1,1 +1,1 @@
-# machine-learning-gp2
+# Machine Learning Group Project 2
