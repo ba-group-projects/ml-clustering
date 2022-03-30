@@ -54,3 +54,4 @@ data.clean$Marital_Status[data.clean$Marital_Status == "Married"] <- "3"
 data.clean$Marital_Status[data.clean$Marital_Status == "Divorced"] <- "4"
 data.clean$Marital_Status[data.clean$Marital_Status == "Widow"] <- "5"
 data.clean$Marital_Status <- as.numeric(data.clean$Marital_Status)
+
