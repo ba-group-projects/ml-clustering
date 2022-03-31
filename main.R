@@ -31,6 +31,17 @@ str(numerical.data)
 corrplot(cor(numerical.data), tl.col = "black", diag = FALSE, 
          method = 'number', type = 'upper')
 
+data_no_DT = subset(data.clean, select = -c(1:2))
+
+## Correlation matrix
+library(corrplot)
+library(corrgram)
+par(mfrow=c(1,1))
+
+cor_1 <- round(cor(data_no_DT, use = "pairwise.complete.obs"),2)
+
+corrplot.mixed(cor_1, lower = "number", upper = "ellipse", lower.col = "black", tl.cex=0.5)
+
 # # inefficient to use this, too much data
 # ggpairs(numerical.data)#, aes(color = class, alpha = 0.5))
 
@@ -80,7 +91,7 @@ fa.eigen$values
 sum(fa.eigen$values)
 
 
-cumsum(fa.eigen$values)/19
+cumsum(fa.eigen$values)/20
 # seeing this, using the first 4, we can explain 79% of the data
 # draw screen plot for better visualisation
 
