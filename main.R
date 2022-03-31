@@ -61,43 +61,26 @@ data.clean$Age <- (2014 - data.clean$Year_Birth)
 # Figuring out 'Dt_Customer' dataset
 data.clean$Dt_Customer <- as.Date.numeric(data.clean$Dt_Customer)
 
+# TODO 
+# Remove Dt_customer for now
+data.clean$Dt_Customer <- NULL 
 
 ######## Factor Analysis ########
+######## ######## ######## ########
 
 ### determine the number of factors of FA
-# We want to identify the component of the correlation structure
-
-# Remove Dt_customer for now 
-data.clean$Dt_Customer <- NULL
-
-
 fa.cor = cor(data.clean)
-
-
-# looking at fa.cor
-# let's look at eigenvector of the correlation to see how many factors we use
-
 fa.eigen = eigen(fa.cor)
 fa.eigen$values
-# in decreasing values
-# higher = more important
-# rule of thuumb to see the number of variables we should use? Do the sum
-
 sum(fa.eigen$values)
 
-
-cumsum(fa.eigen$values)/19
-# seeing this, using the first 4, we can explain 79% of the data
-# draw screen plot for better visualisation
-
-
-# use the scree plot
+# Cumulative sum of eigenvalues
+cumsum(fa.eigen$values)/19 
+# use the scree plot 
 plot(fa.eigen$values, type = "b", ylab = "Eigenvalues", xlab = "Factor") # we choose 4
-# plot(cumsum(fa.eigen$values)/17, type = "b", ylab = "Eigenvalues", xlab = "Factor") # we choose 4
 
 
-##############################################
-### factor analysis
+### Factor Analysis
 # Choosing 6 as it explains 71.4% of the data
 fa.res = factanal(x = data.clean, factors = 7, rotation = "none") # factor = 4 because of our eigenvalues easlier
 fa.res
@@ -125,47 +108,30 @@ head(fa.res$scores)
 summary(lm(Factor2 ~ Factor1, data = as.data.frame(fa.res$scores)))
 
 
-
 ####### PCA ########
-
-
-# # briefly examine the data
-# apply(data.clean, 2, mean)
-# apply(data.clean, 2, var)
-# apply PCA
 
 # Apply PCR to data
 pr.out = prcomp(data.clean, scale = TRUE)
 
-# # trying out PCA with first 7 columns
-# pr.out = prcomp(data.freq, scale = TRUE)
-names(pr.out)
-# have a look at the output
-pr.out$center
-pr.out$scale
+# PCA Rotation Output
 pr.out$rotation
-# get the PC vector
-dim(pr.out$x)
+
 # plot the PCs
 biplot(pr.out, scale = 0,cex=0.5)
 pr.out$rotation = -pr.out$rotation
 pr.out$x = -pr.out$x
 biplot(pr.out, scale =0,cex=0.5)
 # check the variance explained by each PC
-pr.out$sdev
 pr.var = pr.out$sdev ^2
-pr.var
 # proportion of variance explained
 pve = pr.var/sum(pr.var)
-pve
 cumsum(pve)
+
 plot(pve, xlab = " Principal Component", ylab = "Proportion of
 Variance Explained", ylim = c(0,1), type = "b")
 
-plot(cumsum(pve), xlab = "Principal Component", ylab ="
-Cumulative Proportion of Variance Explained", ylim = c(0,1),
-     type = "b")
 
+## Test 1 - Taking only two components
 # Plotting PC1 and PC2
 PC1 <- pr.out$rotation[,1]
 
@@ -184,25 +150,162 @@ data into a lower one for modelling and analytical purposes.
 our_results
 PCA may not be a suitable task, as it is unable for us to clearly understand the 
 number and identity of segments in our customer dataset. 
+ - need to dispute on normal distribution
 
 
 "
 
-# Plotting importance of each variable
-PC1 <- pr.out$rotation[,1]
-PC1_scores <- abs(PC1)
-PC1_scores_ordered <- sort(PC1_scores, decreasing = TRUE)
-names(PC1_scores_ordered)
+# Applying kmeans to PCA
+library(cluster)
+
+# Sample
+model=kmeans(pca_1_2, 2, nstart = 10)
+clusplot(pca_1_2,model$cluster, main="3 Cluster")
+sil <- silhouette(model$cluster, dist(pca_1_2))
+fviz_silhouette(sil)
+mean(sil[,3])
+
+
+# Test different silhouette scores
+loop_data <- pca_1_2
+score = c()
+n_cluster = c()
+
+for (i in 2:5) {
+  model=kmeans(loop_data, i, nstart = 10)
+  sil <- silhouette(model$cluster, dist(loop_data))
+  mean_sil <- mean(sil[,3])
+  score <- c(score, mean_sil)
+  n_cluster = c(n_cluster, i)
+}
+
+# Table to show different silhouettte score
+sil_table = cbind(n_cluster, score)
+
+# Other clusters
+
+
+
+# fmodel=kmeans(pca_1_2,3, nstart = 10)
+# library(cluster)
+# clusplot(pca_1_2,model$cluster, main="3 Cluster")
+# 
+# model=kmeans(pca_1_2,4)
+# library(cluster)
+# clusplot(pca_1_2,model$cluster)
+# 
+# model=kmeans(pca_1_2,5)
+# library(cluster)
+# clusplot(pca_1_2,model$cluster)
+
+
+# IF settle for 2 clusters
+
+model=kmeans(pca_1_2, 3, nstart = 10)
+clusplot(pca_1_2,model$cluster, main="2 Cluster")
+
+plot(pca_1_2[,1], pca_1_2[,2], col=model$cluster)
+
+
+# IF PCA component = 3
 
 # Plotting 3d
-# install.packages("scatterplot3d")
-# 
-# library(scatterplot3d)
 
+library(scatterplot3d)
 
-pca_1to3 <- data.frame(pr.out$x[, 1:3])
-scatterplot3d(pca_1to3,
+pca1to3 <- data.frame(pr.out$x[, 1:3])
+
+model_3cluster=kmeans(pca1to3, 3, nstart = 10)
+
+scatterplot3d(pca1to3,
               main="3D Scatter Plot",
               xlab = "PCA1",
               ylab = "PCA2",
-              zlab = "PCA3", angle=60)
+              zlab = "PCA3", angle=40,
+              color = model_3cluster$cluster)
+
+model_3cluster$cluster
+
+
+# test
+
+biplot(pr.out, scale = 0,cex=0.5)
+pr.out$rotation = -pr.out$rotation
+pr.out$x = -pr.out$x
+biplot(pr.out, scale =0,cex=0.5, col=model$cluster)
+
+
+
+
+
+"
+
+So, the interpretation of the silhouette width is the following:
+
+Si > 0 means that the observation is well clustered. The closest it is to 1, the best it is clustered.
+Si < 0 means that the observation was placed in the wrong cluster.
+Si = 0 means that the observation is between two clusters.
+"
+
+
+# # Testing to see the optimal number of groups of k means
+# 
+# wssplot <- function(data, nc=15, seed=123){
+#   wss <- (nrow(data)-1)*sum(apply(data,2,var))
+#   for (i in 2:nc){
+#     set.seed(seed)
+#     wss[i] <- sum(kmeans(data, centers=i)$withinss)}
+#   plot(1:nc, wss, type="b", xlab="Number of groups",
+#        ylab="Sum of squares within a group")}
+# 
+# wssplot(pca_1_2, nc = 20)
+# 
+# 
+# # Plotting importance of each variable
+# PC1 <- pr.out$rotation[,1]
+# PC1_scores <- abs(PC1)
+# PC1_scores_ordered <- sort(PC1_scores, decreasing = TRUE)
+# names(PC1_scores_ordered)
+# 
+# # Plotting 3d
+# 
+# library(scatterplot3d)
+# 
+# 
+# pca_1to3 <- data.frame(pr.out$x[, 1:3])
+# scatterplot3d(pca_1to3,
+#               main="3D Scatter Plot",
+#               xlab = "PCA1",
+#               ylab = "PCA2",
+#               zlab = "PCA3", angle=40)
+
+
+
+## Using TENSORFLOW
+
+
+
+
+# #### ICA
+# 
+# ############################################################
+# ############ Independent component analysis ###############
+# 
+# ##### apply ICA
+# library(fastICA)
+# set.seed(20)
+# latent = fastICA(data.clean, 5, fun = "logcosh", alpha = 1,
+#                  row.norm = TRUE, maxit = 200,
+#                  tol = 0.0001, verbose = TRUE)
+# ##### the estimated source signals are in S
+# par(mfrow = c(1, 2))
+# plot(1:2215, latent$S[,1], type = "l", xlab = "Esource 1",ylab="",cex.lab=1.5,cex.axis=1.5,lwd=2)
+# plot(1:2215, latent$S[,2], type = "l", xlab = "Esource 1",ylab="",cex.lab=1.5,cex.axis=1.5,lwd=2)
+# 
+# 
+# 
+# #### Isometric feature mapping
+# library(vegan)
+# dis = dist(data.clean)
+# swissIsomap = isomap(dis, k=10)
+# plot(swissIsomap,col=labels)
