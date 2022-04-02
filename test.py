@@ -1,0 +1,2 @@
+stripe_acuity_df['Description'] = stripe_acuity_df['Description'].fillna(0)
+stripe_acuity_df['Appointment ID'] = stripe_acuity_df['Description'].apply(lambda x: re.findall(r'[0-9]{9}',str(x))[0] if len(re.findall(r'[0-9]{9}',str(x)))!=0 else 0)
