@@ -261,7 +261,7 @@ ica.plot = ggplot(ica.loading, aes(x = variable, y = factor(features, level = fe
   coord_fixed() + ylab(NULL) + 
   theme(axis.text.y=element_blank(), axis.ticks.y=element_blank(), plot.title = element_text(hjust = 0.5))
 
-# TODO: beautify heat map comparison plot
+# heat map comparison plot
 grid.arrange(fa.plot, pr.plot, ica.plot, nrow = 1, 
              top=textGrob("Compare loadings among FA, PCA and ICA", gp=gpar(fontsize=15, font = 2)))
 
