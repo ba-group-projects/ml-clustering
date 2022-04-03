@@ -13,6 +13,7 @@ library(EFA.dimensions)
 library(fastICA)
 library(tidyr)
 library(stringr)
+library(grid)
 library(gridExtra)
 library(ica)
 
@@ -119,7 +120,6 @@ corr_simple()
 
 # TODO: add histogram plots for appendix
 
-
 features.order = c("Education", "Marital_Status", "Kidhome", "Teenhome", "Age", 
                    "Dt_Customer", "Income", "Recency", "MntWines", "MntFruits", 
                    "MntMeatProducts", "MntFishProducts", "MntSweetProducts",
@@ -143,10 +143,11 @@ fa.eigen$values
 
 # in decreasing values
 # higher = more important
-# rule of thuumb to see the number of variables we should use? Do the sum
+# rule of thumb to see the number of variables we should use? Do the sum
 sum(fa.eigen$values)
 
-cumsum(fa.eigen$values)/ncol(numerical.data) # Which is 19 here
+# to select number of factors
+cumsum(fa.eigen$values) / ncol(numerical.data) # Which is 19 here
 
 # seeing this, using the first 4, we can explain 79% of the data
 # draw screen plot for better visualisation
@@ -156,7 +157,7 @@ plot(fa.eigen$values, type = "b", ylab = "Eigenvalues", xlab = "Factor") # we ch
 # plot(cumsum(fa.eigen$values)/17, type = "b", ylab = "Eigenvalues", xlab = "Factor") # we choose 4
 
 ### factor analysis with rotation
-fa.res = factanal(x = numerical.data, factors = 6, rotation = "promax")
+fa.res = factanal(x = numerical.data, factors = 4, rotation = "promax")
 # promax belongs to the oblique rotation?
 
 print(fa.res, cut = 0.2)
@@ -167,16 +168,17 @@ print(fa.res, cut = 0.2)
 
 ### factor scores
 # TODO: play around the rotation method
-fa.res.rot = factanal(x = numerical.data, factors = 6, rotation = "promax", scores = "Bartlett")
+fa.res.rot = factanal(x = numerical.data, factors = 4, rotation = "promax", scores = "Bartlett")
 head(fa.res.rot$scores)
 summary(lm(Factor2 ~ Factor1, data = as.data.frame(fa.res.rot$scores)))
-fa.res.rot.loading  = data.frame(fa.res.rot$loadings[1:19,1:6])
+fa.res.rot.loading  = data.frame(fa.res.rot$loadings[1:19,1:4])
 fa.res.rot.loading$features = rownames(fa.res.rot.loading)
-colnames(fa.res.rot.loading) = c('F1','F2','F3','F4','F5','F6','features')
+colnames(fa.res.rot.loading) = c('F1','F2','F3','F4','features')
+
+# factors
 fa.res.rot.loading
 
-# draw the heatmap
-par(mfrow=c(1,1))
+# prepare data for heat map
 fa.res.df = melt(fa.res.rot.loading)
 fa.res.df$features = factor(fa.res.df$features, levels = c("Education", "Marital_Status", "Kidhome", "Teenhome", "Age", 
                                                            "Dt_Customer", "Income", "Recency", "MntWines", "MntFruits", 
@@ -184,32 +186,26 @@ fa.res.df$features = factor(fa.res.df$features, levels = c("Education", "Marital
                                                            "MntGoldProds", "NumDealsPurchases", "NumWebPurchases", 
                                                            "NumCatalogPurchases", "NumStorePurchases", "NumWebVisitsMonth"))
 
-fa.plot = ggplot(fa.res.df, aes(x = variable, y = factor(features, level = features.order), fill = value)) +
-  geom_tile(color = "white",
-            lwd = 1.5,
-            linetype = 1, show.legend = FALSE) +
-  scale_fill_gradient2(low='blue',high='red')+
-  coord_fixed()
-
 ###### PRINCIPAL COMPONENT ANALYSIS #######
 
-# Apply PCR to data
-pr.out = data.frame(prcomp(numerical.data, scale = TRUE)$rotation[1:19,1:6])
-pr.out$features = rownames(pr.out)
-pr.res.df = melt(pr.out)
-pr.res.df$features = factor(pr.res.df$features, levels = c("Education", "Marital_Status", "Kidhome", "Teenhome", "Age", 
+# Apply PCA to data
+pc.res = prcomp(numerical.data, scale = TRUE)
+
+# we pick 9 components to explain 80% of variance
+cumsum(pc.res$sdev^2/sum(pc.res$sdev^2))
+pc.loading = data.frame(pc.res$rotation[1:19,1:9])
+
+# principal components
+pc.loading
+
+# prepare data for heat map
+pc.loading$features = rownames(pc.loading)
+pr.loading.df = melt(pc.loading)
+pr.loading.df$features = factor(pr.loading.df$features, levels = c("Education", "Marital_Status", "Kidhome", "Teenhome", "Age", 
                                                            "Dt_Customer", "Income", "Recency", "MntWines", "MntFruits", 
                                                            "MntMeatProducts", "MntFishProducts", "MntSweetProducts",
                                                            "MntGoldProds", "NumDealsPurchases", "NumWebPurchases", 
                                                            "NumCatalogPurchases", "NumStorePurchases", "NumWebVisitsMonth"))
-
-pr.plot = ggplot(pr.res.df, aes(x = variable, y = factor(features, level = features.order), fill = value)) +
-  geom_tile(color = "white",
-            lwd = 1.5,
-            linetype = 1, show.legend = FALSE) +
-  scale_fill_gradient2(low='blue',high='red')+
-  coord_fixed() + ylab(NULL) + theme(axis.text.y=element_blank(), 
-                                     axis.ticks.y=element_blank())
 
 ###### INDEPENDENT COMPONENT ANALYSIS ######
 # TODO ask about classification variable
@@ -229,26 +225,45 @@ ica.loading = data.frame(t(ica$A)) %>%
   rename_with(~ str_glue("IC{seq(.)}")) %>%
   mutate(variable = names(numerical.data)) %>%
   pivot_longer(cols = starts_with("IC"), names_to = "components", values_to = "loading")
+
+# prepare data for heat map
 colnames(ica.loading) = c("features","variable","value")
 ica.loading$features = factor(ica.loading$features, levels = c("Education", "Marital_Status", "Kidhome", "Teenhome", "Age", 
                                                               "Dt_Customer", "Income", "Recency", "MntWines", "MntFruits", 
                                                               "MntMeatProducts", "MntFishProducts", "MntSweetProducts",
                                                               "MntGoldProds", "NumDealsPurchases", "NumWebPurchases", 
                                                               "NumCatalogPurchases", "NumStorePurchases", "NumWebVisitsMonth"))
-ica.plot = ggplot(ica.loading, aes(x = variable, y = factor(features, level = features.order), fill = value)) +
-  geom_tile(color = "white",
-            lwd = 1.5,
-            linetype = 1) +
-  scale_fill_gradient2(low='blue',high='red',limits=c(-1,1))+
-  coord_fixed() + ylab(NULL) + theme(axis.text.y=element_blank(), 
-                                     axis.ticks.y=element_blank())
+
+# TODO: ask Rui how to pick # of components for ICA
+# TODO: extract variance explained for ICA
 
 ###### COMPARE LOADINGS ######
 
-# TODO: beautify heat map comparison plot
-grid.arrange(fa.plot, pr.plot,ica.plot, nrow = 1)
+fa.plot = ggplot(fa.res.df, aes(x = variable, y = factor(features, level = features.order), fill = value)) +
+  geom_tile(color = "white",
+            lwd = 1.5,
+            linetype = 1, show.legend = FALSE) +
+  scale_fill_gradient2(low='blue',high='red') +
+  ylab("Features") + xlab("Factors") + ggtitle('FA') +
+  coord_fixed() + theme(plot.title = element_text(hjust = 0.5))
 
-# TODO: extract variance explained for all 3 dimension reduction methods
+pr.plot = ggplot(pr.loading.df, aes(x = variable, y = factor(features, level = features.order), fill = value)) +
+  geom_tile(color = "white",
+            lwd = 1.5,
+            linetype = 1, show.legend = FALSE) +
+  scale_fill_gradient2(low='blue',high='red') + xlab("Components") + ggtitle('PCA') +
+  coord_fixed() + ylab(NULL) + 
+  theme(axis.text.y=element_blank(), axis.ticks.y=element_blank(), plot.title = element_text(hjust = 0.5))
+
+ica.plot = ggplot(ica.loading, aes(x = variable, y = factor(features, level = features.order), fill = value)) +
+  geom_tile(color = "white", lwd = 1.5, linetype = 1) + 
+  scale_fill_gradient2(low='blue',high='red',limits=c(-1,1)) + xlab("Components") + ggtitle('ICA') +
+  coord_fixed() + ylab(NULL) + 
+  theme(axis.text.y=element_blank(), axis.ticks.y=element_blank(), plot.title = element_text(hjust = 0.5))
+
+# TODO: beautify heat map comparison plot
+grid.arrange(fa.plot, pr.plot, ica.plot, nrow = 1, 
+             top=textGrob("Compare loadings among FA, PCA and ICA", gp=gpar(fontsize=15, font = 2)))
 
 ##################
 ### CLUSTERING ###
@@ -256,7 +271,7 @@ grid.arrange(fa.plot, pr.plot,ica.plot, nrow = 1)
 
 # TODO: use ICA components for clustering
 
-###### HIERCHICAL CLUSTERING ######
+###### HEIRARCHICAL CLUSTERING ######
 
 
 
