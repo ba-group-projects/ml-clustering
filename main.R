@@ -1,4 +1,6 @@
 # import libraries
+library(ggplot2)
+library(reshape)
 library(dplyr)
 library(GGally)
 library(corrplot)
@@ -6,6 +8,17 @@ library(lubridate)
 library(forcats)
 library(readr)
 library(reshape)
+library(polycor)
+library(EFA.dimensions)
+library(fastICA)
+library(tidyr)
+library(stringr)
+library(gridExtra)
+library(ica)
+
+##################
+### PREPROCESS ###
+##################
 
 # import data
 data.ori = read.csv("customer-personality.csv")
@@ -42,14 +55,14 @@ data.clean$Education[data.clean$Education == "PhD"] <- "3"
 data.clean$Education <- as.numeric(data.clean$Education)
 
 ## Marital Status - Creating 2 categories of Single and together
-data.clean$Marital_Status[data.clean$Marital_Status == "Absurd"] <- "1"
-data.clean$Marital_Status[data.clean$Marital_Status == "Alone"] <- "1"
-data.clean$Marital_Status[data.clean$Marital_Status == "YOLO"] <- "1"
-data.clean$Marital_Status[data.clean$Marital_Status == "Single"] <- "1"
-data.clean$Marital_Status[data.clean$Marital_Status == "Together"] <- "2"
-data.clean$Marital_Status[data.clean$Marital_Status == "Married"] <- "2"
-data.clean$Marital_Status[data.clean$Marital_Status == "Divorced"] <- "1"
-data.clean$Marital_Status[data.clean$Marital_Status == "Widow"] <- "1"
+data.clean$Marital_Status[data.clean$Marital_Status == "Absurd"] <- 0
+data.clean$Marital_Status[data.clean$Marital_Status == "Alone"] <- 0
+data.clean$Marital_Status[data.clean$Marital_Status == "YOLO"] <- 0
+data.clean$Marital_Status[data.clean$Marital_Status == "Single"] <- 0
+data.clean$Marital_Status[data.clean$Marital_Status == "Together"] <- 1
+data.clean$Marital_Status[data.clean$Marital_Status == "Married"] <- 1
+data.clean$Marital_Status[data.clean$Marital_Status == "Divorced"] <- 0
+data.clean$Marital_Status[data.clean$Marital_Status == "Widow"] <- 0
 data.clean$Marital_Status <- as.numeric(data.clean$Marital_Status)
 
 ## Dt_customer
@@ -64,20 +77,16 @@ data.clean$Dt_Customer <- fct_collapse(data.clean$Dt_Customer,
 
 data.clean$Dt_Customer <- as.numeric(levels(data.clean$Dt_Customer))[data.clean$Dt_Customer]
 
-# Adding Age variable 
+# Adding Age variable
 data.clean$Age <- (2015 - data.clean$Year_Birth)
 
 # filter numerical columns
 numerical.data = data.clean[, c(3:21)]#:ncol(data.ori))]
 str(numerical.data)
 
-# plot correlation matrix
-# corrplot(cor(numerical.data), tl.col = "black", diag = FALSE, 
-         # method = 'number', type = 'upper')
-
-# cor_1 <- round(cor(numerical.data, use = "pairwise.complete.obs"),2)
-
-# corrplot.mixed(cor_1, lower = "number", upper = "ellipse", lower.col = "black", tl.cex=0.5)
+###########
+### EDA ###
+###########
 
 corr_simple <- function(data=numerical.data,sig=0.5){
   #convert data to numeric in order to run correlations
@@ -108,150 +117,148 @@ corr_simple <- function(data=numerical.data,sig=0.5){
 }
 corr_simple()
 
-# # inefficient to use this, too much data
-# ggpairs(numerical.data)#, aes(color = class, alpha = 0.5))
+# TODO: add histogram plots for appendix
 
-######## Factor Analysis ########
+
+features.order = c("Education", "Marital_Status", "Kidhome", "Teenhome", "Age", 
+                   "Dt_Customer", "Income", "Recency", "MntWines", "MntFruits", 
+                   "MntMeatProducts", "MntFishProducts", "MntSweetProducts",
+                   "MntGoldProds", "NumDealsPurchases", "NumWebPurchases", 
+                   "NumCatalogPurchases", "NumStorePurchases", "NumWebVisitsMonth")
+
+###########################
+### DIMENSION REDUCTION ###
+###########################
+
+####### FACTOR ANALYSIS #######
 
 ### determine the number of factors of FA
 # We want to identify the component of the correlation structure
-
-# Remove Dt_customer for now 
-# data.clean$Dt_Customer <- NULL
-
-
-fa.cor = cor(data.clean)
-
+fa.cor = POLYCHORIC_R(numerical.data)
 
 # looking at fa.cor
 # let's look at eigenvector of the correlation to see how many factors we use
-
 fa.eigen = eigen(fa.cor)
 fa.eigen$values
+
 # in decreasing values
 # higher = more important
 # rule of thuumb to see the number of variables we should use? Do the sum
-
 sum(fa.eigen$values)
 
+cumsum(fa.eigen$values)/ncol(numerical.data) # Which is 19 here
 
-cumsum(fa.eigen$values)/19
 # seeing this, using the first 4, we can explain 79% of the data
 # draw screen plot for better visualisation
-
 
 # use the scree plot
 plot(fa.eigen$values, type = "b", ylab = "Eigenvalues", xlab = "Factor") # we choose 4
 # plot(cumsum(fa.eigen$values)/17, type = "b", ylab = "Eigenvalues", xlab = "Factor") # we choose 4
 
-
-##############################################
-### factor analysis
-# Choosing 6 as it explains 71.4% of the data
-fa.res = factanal(x = data.clean, factors = 7, rotation = "none") # factor = 4 because of our eigenvalues easlier
-fa.res
-
-#uniqueness = epsilon values
-# loadings
-# We have proportion variance explained by these loadings
-# hypothesis test to see whether 4 factors are sufficient
-# here, our p value is high therefore we don't reject that 4 factors are sufficient
-
-
-##############################################
-### factor rotation
-fa.res = factanal(x = data.clean, factors = 6, rotation = "promax")
+### factor analysis with rotation
+fa.res = factanal(x = numerical.data, factors = 6, rotation = "promax")
 # promax belongs to the oblique rotation?
 
 print(fa.res, cut = 0.2)
+
 # we only show the factors with a loading of higher than 0.2
 # therefore only selecting the variables with large loading
 # you can see that paragraph, sentence and wordm is with factor 1
-##############################################
+
 ### factor scores
-fa.res = factanal(x = data.clean, factors = 7, rotation = "promax", scores = "Bartlett")
-head(fa.res$scores)
-summary(lm(Factor2 ~ Factor1, data = as.data.frame(fa.res$scores)))
+# TODO: play around the rotation method
+fa.res.rot = factanal(x = numerical.data, factors = 6, rotation = "promax", scores = "Bartlett")
+head(fa.res.rot$scores)
+summary(lm(Factor2 ~ Factor1, data = as.data.frame(fa.res.rot$scores)))
+fa.res.rot.loading  = data.frame(fa.res.rot$loadings[1:19,1:6])
+fa.res.rot.loading$features = rownames(fa.res.rot.loading)
+colnames(fa.res.rot.loading) = c('F1','F2','F3','F4','F5','F6','features')
+fa.res.rot.loading
 
+# draw the heatmap
+par(mfrow=c(1,1))
+fa.res.df = melt(fa.res.rot.loading)
+fa.res.df$features = factor(fa.res.df$features, levels = c("Education", "Marital_Status", "Kidhome", "Teenhome", "Age", 
+                                                           "Dt_Customer", "Income", "Recency", "MntWines", "MntFruits", 
+                                                           "MntMeatProducts", "MntFishProducts", "MntSweetProducts",
+                                                           "MntGoldProds", "NumDealsPurchases", "NumWebPurchases", 
+                                                           "NumCatalogPurchases", "NumStorePurchases", "NumWebVisitsMonth"))
 
+fa.plot = ggplot(fa.res.df, aes(x = variable, y = factor(features, level = features.order), fill = value)) +
+  geom_tile(color = "white",
+            lwd = 1.5,
+            linetype = 1, show.legend = FALSE) +
+  scale_fill_gradient2(low='blue',high='red')+
+  coord_fixed()
 
-####### PCA ########
-
-
-# # briefly examine the data
-# apply(data.clean, 2, mean)
-# apply(data.clean, 2, var)
-# apply PCA
+###### PRINCIPAL COMPONENT ANALYSIS #######
 
 # Apply PCR to data
-pr.out = prcomp(data.clean, scale = TRUE)
+pr.out = data.frame(prcomp(numerical.data, scale = TRUE)$rotation[1:19,1:6])
+pr.out$features = rownames(pr.out)
+pr.res.df = melt(pr.out)
+pr.res.df$features = factor(pr.res.df$features, levels = c("Education", "Marital_Status", "Kidhome", "Teenhome", "Age", 
+                                                           "Dt_Customer", "Income", "Recency", "MntWines", "MntFruits", 
+                                                           "MntMeatProducts", "MntFishProducts", "MntSweetProducts",
+                                                           "MntGoldProds", "NumDealsPurchases", "NumWebPurchases", 
+                                                           "NumCatalogPurchases", "NumStorePurchases", "NumWebVisitsMonth"))
 
-# # trying out PCA with first 7 columns
-# pr.out = prcomp(data.freq, scale = TRUE)
-names(pr.out)
-# have a look at the output
-pr.out$center
-pr.out$scale
-pr.out$rotation
-# get the PC vector
-dim(pr.out$x)
-# plot the PCs
-biplot(pr.out, scale = 0,cex=0.5)
-pr.out$rotation = -pr.out$rotation
-pr.out$x = -pr.out$x
-biplot(pr.out, scale =0,cex=0.5)
-# check the variance explained by each PC
-pr.out$sdev
-pr.var = pr.out$sdev ^2
-pr.var
-# proportion of variance explained
-pve = pr.var/sum(pr.var)
-pve
-cumsum(pve)
-plot(pve, xlab = " Principal Component", ylab = "Proportion of
-Variance Explained", ylim = c(0,1), type = "b")
+pr.plot = ggplot(pr.res.df, aes(x = variable, y = factor(features, level = features.order), fill = value)) +
+  geom_tile(color = "white",
+            lwd = 1.5,
+            linetype = 1, show.legend = FALSE) +
+  scale_fill_gradient2(low='blue',high='red')+
+  coord_fixed() + ylab(NULL) + theme(axis.text.y=element_blank(), 
+                                     axis.ticks.y=element_blank())
 
-plot(cumsum(pve), xlab = "Principal Component", ylab ="
-Cumulative Proportion of Variance Explained", ylim = c(0,1),
-     type = "b")
+###### INDEPENDENT COMPONENT ANALYSIS ######
 
-# Plotting PC1 and PC2
-PC1 <- pr.out$rotation[,1]
+set.seed(20)
+ica = fastICA(numerical.data, 6, fun = "logcosh", alpha = 1,
+                   row.norm = T, maxit = 200,
+                   tol = 0.0001, verbose = FALSE)
 
-pca_1_2 <- data.frame(pr.out$x[, 1:2])
+# # xia code
+# ica.2 = icafast(numerical.data, 4, center = FALSE, maxit = 200, tol = 0.0001,
+#                   Rmat = diag(4), alg = c("par", "def"),
+#                   fun = c("logcosh"), alpha = 1)
+# ica.2
 
-plot(pca_1_2[,1], pca_1_2[,2])
+ica.loading = data.frame(t(ica$A)) %>% 
+  rename_with(~ str_glue("IC{seq(.)}")) %>%
+  mutate(variable = names(numerical.data)) %>%
+  pivot_longer(cols = starts_with("IC"), names_to = "components", values_to = "loading")
+colnames(ica.loading) = c("features","variable","value")
+ica.loading$features = factor(ica.loading$features, levels = c("Education", "Marital_Status", "Kidhome", "Teenhome", "Age", 
+                                                              "Dt_Customer", "Income", "Recency", "MntWines", "MntFruits", 
+                                                              "MntMeatProducts", "MntFishProducts", "MntSweetProducts",
+                                                              "MntGoldProds", "NumDealsPurchases", "NumWebPurchases", 
+                                                              "NumCatalogPurchases", "NumStorePurchases", "NumWebVisitsMonth"))
+ica.plot = ggplot(ica.loading, aes(x = variable, y = factor(features, level = features.order), fill = value)) +
+  geom_tile(color = "white",
+            lwd = 1.5,
+            linetype = 1) +
+  scale_fill_gradient2(low='blue',high='red',limits=c(-1,1))+
+  coord_fixed() + ylab(NULL) + theme(axis.text.y=element_blank(), 
+                                     axis.ticks.y=element_blank())
 
-"
-PCA - 
-from TDS:
-This plot clearly shows how instead of the 8 columns given to us in the dataset,
-only two were enough to understand we had three different types of pizzas,
-thus making PCA a successful analytical tool to reduce high-dimensional 
-data into a lower one for modelling and analytical purposes.
+###### COMPARE LOADINGS ######
 
-our_results
-PCA may not be a suitable task, as it is unable for us to clearly understand the 
-number and identity of segments in our customer dataset. 
+# TODO: beautify heat map comparison plot
+grid.arrange(fa.plot, pr.plot,ica.plot, nrow = 1)
 
+# TODO: extract variance explained for all 3 dimension reduction methods
 
-"
+##################
+### CLUSTERING ###
+##################
 
-# Plotting importance of each variable
-PC1 <- pr.out$rotation[,1]
-PC1_scores <- abs(PC1)
-PC1_scores_ordered <- sort(PC1_scores, decreasing = TRUE)
-names(PC1_scores_ordered)
+# TODO: use ICA components for clustering
 
-# Plotting 3d
-# install.packages("scatterplot3d")
-# 
-# library(scatterplot3d)
+###### HIERCHICAL CLUSTERING ######
 
 
-pca_1to3 <- data.frame(pr.out$x[, 1:3])
-scatterplot3d(pca_1to3,
-              main="3D Scatter Plot",
-              xlab = "PCA1",
-              ylab = "PCA2",
-              zlab = "PCA3", angle=60)
+
+###### KMEANS CLUSTERING ######
+
+
