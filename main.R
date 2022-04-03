@@ -2,6 +2,10 @@
 library(dplyr)
 library(GGally)
 library(corrplot)
+library(lubridate)
+library(forcats)
+library(readr)
+library(reshape)
 
 # import data
 data.ori = read.csv("customer-personality.csv")
@@ -20,47 +24,92 @@ data.clean = data.ori[which(!is.na(data.ori$Income)),]
 str(data.clean)
 sum(is.na(data.clean))
 
-# remove outliers from income 
+# remove outliers from income and birth year
+## income
 data.clean <- data.clean[!(data.clean$Income >=200000),]
 
-# filter numerical columns
-numerical.data = data.clean[, c(2,5:7,9:ncol(data.ori))]
-str(numerical.data)
-
-# plot correlation matrix
-corrplot(cor(numerical.data), tl.col = "black", diag = FALSE, 
-         method = 'number', type = 'upper')
-
-# # inefficient to use this, too much data
-# ggpairs(numerical.data)#, aes(color = class, alpha = 0.5))
+## birth year
+data.clean <- data.clean[!(data.clean$Year_Birth <=1901),]
 
 
-# converting 'Education' and 'Marital status' variables to categorical variables
-## Education
+# converting 'Education', 'Marital status', and 'Dt_Customer' variables to categorical variables
+## Education - Creating 3 categories
 data.clean$Education[data.clean$Education == "Basic"] <- "1"
 data.clean$Education[data.clean$Education == "Graduation"] <- "2"
 data.clean$Education[data.clean$Education == "2n Cycle"] <- "3"
 data.clean$Education[data.clean$Education == "Master"] <- "3"
-data.clean$Education[data.clean$Education == "PhD"] <- "4"
+data.clean$Education[data.clean$Education == "PhD"] <- "3"
 data.clean$Education <- as.numeric(data.clean$Education)
 
-## Marital Status - Merging YOLO, Alone, and Absurd to add to single
+## Marital Status - Creating 2 categories of Single and together
 data.clean$Marital_Status[data.clean$Marital_Status == "Absurd"] <- "1"
 data.clean$Marital_Status[data.clean$Marital_Status == "Alone"] <- "1"
 data.clean$Marital_Status[data.clean$Marital_Status == "YOLO"] <- "1"
 data.clean$Marital_Status[data.clean$Marital_Status == "Single"] <- "1"
 data.clean$Marital_Status[data.clean$Marital_Status == "Together"] <- "2"
-data.clean$Marital_Status[data.clean$Marital_Status == "Married"] <- "3"
-data.clean$Marital_Status[data.clean$Marital_Status == "Divorced"] <- "4"
-data.clean$Marital_Status[data.clean$Marital_Status == "Widow"] <- "5"
+data.clean$Marital_Status[data.clean$Marital_Status == "Married"] <- "2"
+data.clean$Marital_Status[data.clean$Marital_Status == "Divorced"] <- "1"
+data.clean$Marital_Status[data.clean$Marital_Status == "Widow"] <- "1"
 data.clean$Marital_Status <- as.numeric(data.clean$Marital_Status)
 
-# Adding Age variable (EXPLAIN)
-data.clean$Age <- (2014 - data.clean$Year_Birth)
+## Dt_customer
+data.clean$Dt_Customer <- dmy(data.clean$Dt_Customer)
+data.clean$Dt_Customer <- year(data.clean$Dt_Customer)
+data.clean$Dt_Customer <- as.factor(data.clean$Dt_Customer)
 
-# Figuring out 'Dt_Customer' dataset
-data.clean$Dt_Customer <- as.Date.numeric(data.clean$Dt_Customer)
+data.clean$Dt_Customer <- fct_collapse(data.clean$Dt_Customer,
+                                      "3" = "2014",
+                                      "1" = "2012",
+                                      "2" = "2013")
 
+data.clean$Dt_Customer <- as.numeric(levels(data.clean$Dt_Customer))[data.clean$Dt_Customer]
+
+# Adding Age variable 
+data.clean$Age <- (2015 - data.clean$Year_Birth)
+
+# filter numerical columns
+numerical.data = data.clean[, c(3:21)]#:ncol(data.ori))]
+str(numerical.data)
+
+# plot correlation matrix
+# corrplot(cor(numerical.data), tl.col = "black", diag = FALSE, 
+         # method = 'number', type = 'upper')
+
+# cor_1 <- round(cor(numerical.data, use = "pairwise.complete.obs"),2)
+
+# corrplot.mixed(cor_1, lower = "number", upper = "ellipse", lower.col = "black", tl.cex=0.5)
+
+corr_simple <- function(data=numerical.data,sig=0.5){
+  #convert data to numeric in order to run correlations
+  #convert to factor first to keep the integrity of the data - each value will become a number rather than turn into NA
+  df_cor <- data %>% mutate_if(is.character, as.factor)
+  df_cor <- df_cor %>% mutate_if(is.factor, as.numeric)
+  #run a correlation and drop the insignificant ones
+  corr <- cor(df_cor)
+  #prepare to drop duplicates and correlations of 1     
+  corr[lower.tri(corr,diag=TRUE)] <- NA 
+  #drop perfect correlations
+  corr[corr == 1] <- NA 
+  #turn into a 3-column table
+  corr <- as.data.frame(as.table(corr))
+  #remove the NA values from above 
+  corr <- na.omit(corr) 
+  #select significant values  
+  corr <- subset(corr, abs(Freq) > sig) 
+  #sort by highest correlation
+  corr <- corr[order(-abs(corr$Freq)),] 
+  #print table
+  print(corr)
+  #turn corr back into matrix in order to plot with corrplot
+  mtx_corr <- reshape2::acast(corr, Var1~Var2, value.var="Freq")
+  
+  #plot correlations visually
+  corrplot(mtx_corr, is.corr=T, tl.col="black", method = 'number', na.label=" ", number.cex=0.8 ,tl.cex=0.8)
+}
+corr_simple()
+
+# # inefficient to use this, too much data
+# ggpairs(numerical.data)#, aes(color = class, alpha = 0.5))
 
 ######## Factor Analysis ########
 
@@ -68,7 +117,7 @@ data.clean$Dt_Customer <- as.Date.numeric(data.clean$Dt_Customer)
 # We want to identify the component of the correlation structure
 
 # Remove Dt_customer for now 
-data.clean$Dt_Customer <- NULL
+# data.clean$Dt_Customer <- NULL
 
 
 fa.cor = cor(data.clean)
