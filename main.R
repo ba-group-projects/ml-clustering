@@ -212,7 +212,8 @@ pr.plot = ggplot(pr.res.df, aes(x = variable, y = factor(features, level = featu
                                      axis.ticks.y=element_blank())
 
 ###### INDEPENDENT COMPONENT ANALYSIS ######
-
+# TODO ask about classification variable
+# change the number of dimension
 set.seed(20)
 ica = fastICA(numerical.data, 6, fun = "logcosh", alpha = 1,
                    row.norm = T, maxit = 200,
@@ -260,5 +261,39 @@ grid.arrange(fa.plot, pr.plot,ica.plot, nrow = 1)
 
 
 ###### KMEANS CLUSTERING ######
+# load required packages
+library(factoextra)
+library(NbClust)
 
+# Elbow method
+ica.latent = ica$S
+fviz_nbclust(ica.latent, kmeans, method = "wss") +
+  geom_vline(xintercept = 4, linetype = 2) + # add line for better visualisation
+  labs(subtitle = "Elbow method") # add subtitle
 
+kmean.model.4 = kmeans(ica.latent, 4, nstart = 10)
+kmean.model.4.cluster = kmean.model.4$cluster
+
+rfm.R = data.clean$Recency
+rfm.F = rowSums(data.clean[,16:20])
+rfm.M = rowSums(data.clean[,10:15])
+rfm.income = data.clean$Income
+RFM = data.frame(rfm.R,rfm.F,rfm.M,rfm.income)
+
+min.max.scale <- function(x){(x-min(x))/(max(x)-min(x))}
+
+RFM$rfm.R.scaled = min.max.scale(RFM$rfm.R)
+RFM$rfm.F.scaled = min.max.scale(RFM$rfm.F)
+RFM$rfm.M.scaled = min.max.scale(RFM$rfm.M)
+RFM$rfm.income.scaled = min.max.scale(RFM$rfm.income)
+
+RFM$cluster = kmean.model.4.cluster
+
+# Label the cluster
+# plot the rfm in different clusters
+RFM%>%
+  select(cluster, rfm.R.scaled, rfm.F.scaled, rfm.M.scaled,rfm.income.scaled)%>%
+  melt(id='cluster')%>%
+  ggplot(aes(as_factor(cluster), value))+
+  geom_boxplot()+
+  facet_wrap(~variable, ncol = 4)
