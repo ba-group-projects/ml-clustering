@@ -332,6 +332,32 @@ RFM$cluster = kmean.model.4.cluster
 RFM%>%
   select(cluster, rfm.R.scaled, rfm.F.scaled, rfm.M.scaled,rfm.income.scaled)%>%
   melt(id='cluster')%>%
-  ggplot(aes(as_factor(cluster), value))+
+  ggplot(aes(as_factor(cluster), value, fill=as.factor(cluster)))+
+  scale_fill_manual('Cluster',values=c("#ff8c7a", "#92C5DE", "yellow", "#B8E186"))+
   geom_boxplot()+
-  facet_wrap(~variable, ncol = 4)
+  facet_wrap(~variable, ncol = 4)+
+  labs(x = "Cluster", labs="Cluster")
+
+
+# Customer
+
+# data.clean$cluster <- RFM$cluster
+
+
+data.scaled <- data.clean
+data.scaled <- data.frame(sapply(data.scaled, min.max.scale))
+data.scaled$cluster <- RFM$cluster
+
+data.scaled%>%
+  select(cluster, Age, Kidhome, Teenhome,Education, Marital_Status,
+         MntWines, MntFruits, MntMeatProducts, MntFishProducts, 
+         MntSweetProducts, MntGoldProds, NumDealsPurchases, NumWebPurchases,
+         NumCatalogPurchases, NumStorePurchases, NumWebVisitsMonth)%>%
+  melt(id='cluster')%>%
+  ggplot(aes(as_factor(cluster), value, fill=as.factor(cluster)))+
+  scale_fill_manual(values=c("#ff8c7a", "#92C5DE", "yellow", "#B8E186"))+
+  geom_boxplot()+
+  facet_wrap(~variable, ncol = 4) + 
+  theme_light() +
+  labs(x = "Cluster", fill = "Cluster") +
+  scale_color_manual(name="Cluster",values=c("1","2","3","4")) 
