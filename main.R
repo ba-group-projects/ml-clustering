@@ -89,6 +89,7 @@ str(numerical.data)
 ### EDA ###
 ###########
 
+par(mfrow=c(1,1))
 corr_simple <- function(data=numerical.data,sig=0.5){
   #convert data to numeric in order to run correlations
   #convert to factor first to keep the integrity of the data - each value will become a number rather than turn into NA
@@ -119,7 +120,29 @@ corr_simple <- function(data=numerical.data,sig=0.5){
 corr_simple()
 
 # TODO: add histogram plots for appendix
+par(mfrow=c(4,5))
+hist(data.clean$Education, main="Education", xlab=" ")
+hist(data.clean$Marital_Status, main="Marital_Status", xlab=" ", ylab = " ")
+hist(data.clean$Income, main="Income", xlab=" ", ylab = " ")
+hist(data.clean$Kidhome, main="Kidhome", xlab=" ", ylab = " ")
+hist(data.clean$Teenhome, main="Teenhome", xlab=" ", ylab = " ")
+hist(data.clean$Dt_Customer, main="Dt_Customer", xlab=" ")
+hist(data.clean$Recency, main="Recency", xlab=" ", ylab = " ")
+hist(data.clean$MntWines, main="MntWines", xlab=" ", ylab = " ")
+hist(data.clean$MntFruits, main="MntFruits", xlab=" ", ylab = " ")
+hist(data.clean$MntMeatProducts, main="MntMeat", xlab=" ", ylab = " ")
+hist(data.clean$MntFishProducts, main="MntFish", xlab=" ")
+hist(data.clean$MntSweetProducts, main="MntSweet", xlab=" ", ylab = " ")
+hist(data.clean$MntGoldProds, main="MntGold", xlab=" ", ylab = " ")
+hist(data.clean$NumDealsPurchases, main="NumDeals", xlab=" ", ylab = " ")
+hist(data.clean$NumWebPurchases, main="NumWeb", xlab=" ", ylab = " ")
+hist(data.clean$NumCatalogPurchases, main="NumCatalog", xlab=" ")
+hist(data.clean$NumStorePurchases, main="NumStore", xlab=" ", ylab = " ")
+hist(data.clean$NumWebVisitsMonth, main="NumWebVisits", xlab=" ", ylab = " ")
+hist(data.clean$Age, main="Age", xlab=" ", ylab = " ")
 
+
+par(mfrow=c(1,1))
 features.order = c("Education", "Marital_Status", "Kidhome", "Teenhome", "Age", 
                    "Dt_Customer", "Income", "Recency", "MntWines", "MntFruits", 
                    "MntMeatProducts", "MntFishProducts", "MntSweetProducts",
