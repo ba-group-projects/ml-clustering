@@ -66,6 +66,29 @@ data.clean$Marital_Status[data.clean$Marital_Status == "Divorced"] <- "4"
 data.clean$Marital_Status[data.clean$Marital_Status == "Widow"] <- "5"
 data.clean$Marital_Status <- as.numeric(data.clean$Marital_Status)
 
+data.clean <- data.clean[-c(1:2)]
+
+# Distribution plots
+par(mfrow=c(4,5))
+hist(data.clean$Education, main="Education", xlab=" ")
+hist(data.clean$Marital_Status, main="Marital_Status", xlab=" ", ylab = " ")
+hist(data.clean$Income, main="Income", xlab=" ", ylab = " ")
+hist(data.clean$Kidhome, main="Kidhome", xlab=" ", ylab = " ")
+hist(data.clean$Teenhome, main="Teenhome", xlab=" ", ylab = " ")
+hist(data.clean$Dt_Customer, main="Dt_Customer", xlab=" ")
+hist(data.clean$Recency, main="Recency", xlab=" ", ylab = " ")
+hist(data.clean$MntWines, main="MntWines", xlab=" ", ylab = " ")
+hist(data.clean$MntFruits, main="MntFruits", xlab=" ", ylab = " ")
+hist(data.clean$MntMeatProducts, main="MntMeat", xlab=" ", ylab = " ")
+hist(data.clean$MntFishProducts, main="MntFish", xlab=" ")
+hist(data.clean$MntSweetProducts, main="MntSweet", xlab=" ", ylab = " ")
+hist(data.clean$MntGoldProds, main="MntGold", xlab=" ", ylab = " ")
+hist(data.clean$NumDealsPurchases, main="NumDeals", xlab=" ", ylab = " ")
+hist(data.clean$NumWebPurchases, main="NumWeb", xlab=" ", ylab = " ")
+hist(data.clean$NumCatalogPurchases, main="NumCatalog", xlab=" ")
+hist(data.clean$NumStorePurchases, main="NumStore", xlab=" ", ylab = " ")
+hist(data.clean$NumWebVisitsMonth, main="NumWebVisits", xlab=" ", ylab = " ")
+hist(data.clean$Age, main="Age", xlab=" ", ylab = " ")
 
 
 ######## Factor Analysis ########
