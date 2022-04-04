@@ -180,7 +180,7 @@ plot(fa.eigen$values, type = "b", ylab = "Eigenvalues", xlab = "Factor") # we ch
 # plot(cumsum(fa.eigen$values)/17, type = "b", ylab = "Eigenvalues", xlab = "Factor") # we choose 4
 
 ### factor analysis with rotation
-fa.res = factanal(x = numerical.data, factors = 4, rotation = "promax")
+fa.res = factanal(x = numerical.data, factors = 6, rotation = "promax")
 # promax belongs to the oblique rotation?
 
 print(fa.res, cut = 0.2)
@@ -191,12 +191,12 @@ print(fa.res, cut = 0.2)
 
 ### factor scores
 # TODO: play around the rotation method
-fa.res.rot = factanal(x = numerical.data, factors = 4, rotation = "promax", scores = "Bartlett")
+fa.res.rot = factanal(x = numerical.data, factors = 6, rotation = "promax", scores = "Bartlett")
 head(fa.res.rot$scores)
 summary(lm(Factor2 ~ Factor1, data = as.data.frame(fa.res.rot$scores)))
-fa.res.rot.loading  = data.frame(fa.res.rot$loadings[1:19,1:4])
+fa.res.rot.loading  = data.frame(fa.res.rot$loadings[1:19,1:6])
 fa.res.rot.loading$features = rownames(fa.res.rot.loading)
-colnames(fa.res.rot.loading) = c('F1','F2','F3','F4','features')
+colnames(fa.res.rot.loading) = c('F1','F2','F3','F4','F5','F6','features')
 
 # factors
 fa.res.rot.loading
@@ -216,7 +216,7 @@ pc.res = prcomp(numerical.data, scale = TRUE)
 
 # we pick 9 components to explain 80% of variance
 cumsum(pc.res$sdev^2/sum(pc.res$sdev^2))
-pc.loading = data.frame(pc.res$rotation[1:19,1:9])
+pc.loading = data.frame(pc.res$rotation[1:19,1:6])
 
 # principal components
 pc.loading
@@ -334,17 +334,32 @@ RFM$cluster = kmean.model.4.cluster
 RFM%>%
   select(cluster, rfm.R.scaled, rfm.F.scaled, rfm.M.scaled,rfm.income.scaled)%>%
   melt(id='cluster')%>%
-  ggplot(aes(as_factor(cluster), value))+
+  ggplot(aes(as_factor(cluster), value, fill=as.factor(cluster)))+
+  scale_fill_manual('Cluster',values=c("#ff8c7a", "#92C5DE", "yellow", "#B8E186"))+
   geom_boxplot()+
-  facet_wrap(~variable, ncol = 4)
+  facet_wrap(~variable, ncol = 4)+
+  labs(x = "Cluster", labs="Cluster")
 
-# cluster circles
-# Kmeans cluster in ICA components
-fviz_cluster(kmean.model.4, data = as.data.frame(ica.latent[,3:4]),
-             palette = c("#2E9FDF", "#00AFBB", "#E7B800","#E64B35"), 
-             geom = "point",
-             ellipse.type = "convex", 
-             ggtheme = theme_bw()
-)
 
-plot(ica.latent[,3],ica.latent[,4],col = kmean.model.4.cluster)
+# Customer
+
+# data.clean$cluster <- RFM$cluster
+
+
+data.scaled <- data.clean
+data.scaled <- data.frame(sapply(data.scaled, min.max.scale))
+data.scaled$cluster <- RFM$cluster
+
+data.scaled%>%
+  select(cluster, Age, Kidhome, Teenhome,Education, Marital_Status,
+         MntWines, MntFruits, MntMeatProducts, MntFishProducts, 
+         MntSweetProducts, MntGoldProds, NumDealsPurchases, NumWebPurchases,
+         NumCatalogPurchases, NumStorePurchases, NumWebVisitsMonth)%>%
+  melt(id='cluster')%>%
+  ggplot(aes(as_factor(cluster), value, fill=as.factor(cluster)))+
+  scale_fill_manual(values=c("#ff8c7a", "#92C5DE", "yellow", "#B8E186"))+
+  geom_boxplot()+
+  facet_wrap(~variable, ncol = 4) + 
+  theme_light() +
+  labs(x = "Cluster", fill = "Cluster") +
+  scale_color_manual(name="Cluster",values=c("1","2","3","4")) 
