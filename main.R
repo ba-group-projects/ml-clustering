@@ -295,8 +295,11 @@ grid.arrange(fa.plot, pr.plot, ica.plot, nrow = 1,
 # TODO: use ICA components for clustering
 
 ###### HEIRARCHICAL CLUSTERING ######
-
-
+ica.latent = ica$S
+dd = dist(as.data.frame(scale(ica.latent)),method= 'euclidean')
+set.seed(122)
+hs = hclust(dd,method='average')
+plot(hs,hang=-1)
 
 ###### KMEANS CLUSTERING ######
 # load required packages
@@ -304,7 +307,6 @@ library(factoextra)
 library(NbClust)
 
 # Elbow method
-ica.latent = ica$S
 fviz_nbclust(ica.latent, kmeans, method = "wss") +
   geom_vline(xintercept = 4, linetype = 2) + # add line for better visualisation
   labs(subtitle = "Elbow method") # add subtitle
@@ -335,3 +337,14 @@ RFM%>%
   ggplot(aes(as_factor(cluster), value))+
   geom_boxplot()+
   facet_wrap(~variable, ncol = 4)
+
+# cluster circles
+# Kmeans cluster in ICA components
+fviz_cluster(kmean.model.4, data = as.data.frame(ica.latent[,3:4]),
+             palette = c("#2E9FDF", "#00AFBB", "#E7B800","#E64B35"), 
+             geom = "point",
+             ellipse.type = "convex", 
+             ggtheme = theme_bw()
+)
+
+plot(ica.latent[,3],ica.latent[,4],col = kmean.model.4.cluster)

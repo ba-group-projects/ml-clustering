@@ -1,0 +1,149 @@
+---
+title: "main"
+
+header-includes:
+   - \usepackage{ggplot2}
+   - \usepackage{reshape}
+   - \usepackage{dplyr}
+   - \usepackage{GGally}
+
+header-includes:
+   - \usepackage{ggplot2}
+   - \usepackage{reshape}
+   - \usepackage{dplyr}
+   - \usepackage{GGally}
+   - \usepackage{corrplot}
+    - \usepackage{lubridate}
+    - \usepackage{forcats}
+    - \usepackage{readr}
+    - \usepackage{reshape}
+    - \usepackage{polycor}
+    - \usepackage{EFA.dimensions}
+    - \usepackage{fastICA}
+    - \usepackage{tidyr}
+    - \usepackage{stringr}
+    - \usepackage{grid}
+    - \usepackage{gridExtra}
+    - \usepackage{ica}
+
+
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Question
+Download the customer-personality.csv data from Moodle. This dataset contains information of customers that can make the company better understand the behaviour of their customers. Explore the dataset and report any interesting findings.
+
+# Logic of the program
+
+
+# Main Code
+
+```{r import all libraries we need}
+library(ggplot2)
+library(reshape)
+library(dplyr)
+library(GGally)
+library(corrplot)
+library(lubridate)
+library(forcats)
+library(readr)
+library(reshape)
+library(polycor)
+library(EFA.dimensions)
+library(fastICA)
+library(tidyr)
+library(stringr)
+library(grid)
+library(gridExtra)
+library(ica)
+```
+
+We are going to preprocess the data as follows:
+
+1. Remove the row with missing values
+
+2. Remove the outliers from income and birth year
+
+3. Convert 'Education', 'Marital status', and 'Dt_Customer' variables to categorical variables
+ - Create 3 categories for 'Education':
+    "Basic" <- 1
+    "Graduation" <- 2
+    "2n C
+
+```{r proprocessing the data}
+# import data
+data.ori = read.csv("customer-personality.csv")
+
+# summary of data
+str(data.ori)
+```
+
+
+# check for NA
+sum(is.na(data.ori))
+
+# check which columns contain NA
+apply(is.na(data.ori), 2, which)
+
+# remove NA rows
+data.clean = data.ori[which(!is.na(data.ori$Income)),]
+str(data.clean)
+sum(is.na(data.clean))
+
+# remove outliers from income and birth year
+## income
+data.clean <- data.clean[!(data.clean$Income >=200000),]
+
+## birth year
+data.clean <- data.clean[!(data.clean$Year_Birth <=1901),]
+
+
+# converting 'Education', 'Marital status', and 'Dt_Customer' variables to categorical variables
+## Education - Creating 3 categories
+data.clean$Education[data.clean$Education == "Basic"] <- "1"
+data.clean$Education[data.clean$Education == "Graduation"] <- "2"
+data.clean$Education[data.clean$Education == "2n Cycle"] <- "3"
+data.clean$Education[data.clean$Education == "Master"] <- "3"
+data.clean$Education[data.clean$Education == "PhD"] <- "3"
+data.clean$Education <- as.numeric(data.clean$Education)
+
+## Marital Status - Creating 2 categories of Single and together
+data.clean$Marital_Status[data.clean$Marital_Status == "Absurd"] <- 0
+data.clean$Marital_Status[data.clean$Marital_Status == "Alone"] <- 0
+data.clean$Marital_Status[data.clean$Marital_Status == "YOLO"] <- 0
+data.clean$Marital_Status[data.clean$Marital_Status == "Single"] <- 0
+data.clean$Marital_Status[data.clean$Marital_Status == "Together"] <- 1
+data.clean$Marital_Status[data.clean$Marital_Status == "Married"] <- 1
+data.clean$Marital_Status[data.clean$Marital_Status == "Divorced"] <- 0
+data.clean$Marital_Status[data.clean$Marital_Status == "Widow"] <- 0
+data.clean$Marital_Status <- as.numeric(data.clean$Marital_Status)
+
+## Dt_customer
+data.clean$Dt_Customer <- dmy(data.clean$Dt_Customer)
+data.clean$Dt_Customer <- year(data.clean$Dt_Customer)
+data.clean$Dt_Customer <- as.factor(data.clean$Dt_Customer)
+
+data.clean$Dt_Customer <- fct_collapse(data.clean$Dt_Customer,
+                                      "3" = "2014",
+                                      "1" = "2012",
+                                      "2" = "2013")
+
+data.clean$Dt_Customer <- as.numeric(levels(data.clean$Dt_Customer))[data.clean$Dt_Customer]
+
+# Adding Age variable
+data.clean$Age <- (2015 - data.clean$Year_Birth)
+
+# filter numerical columns
+numerical.data = data.clean[, c(3:21)]#:ncol(data.ori))]
+str(numerical.data)
+
+```
+
+
+
+   
+
