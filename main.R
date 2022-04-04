@@ -180,7 +180,7 @@ plot(fa.eigen$values, type = "b", ylab = "Eigenvalues", xlab = "Factor") # we ch
 # plot(cumsum(fa.eigen$values)/17, type = "b", ylab = "Eigenvalues", xlab = "Factor") # we choose 4
 
 ### factor analysis with rotation
-fa.res = factanal(x = numerical.data, factors = 4, rotation = "promax")
+fa.res = factanal(x = numerical.data, factors = 6, rotation = "promax")
 # promax belongs to the oblique rotation?
 
 print(fa.res, cut = 0.2)
@@ -191,12 +191,12 @@ print(fa.res, cut = 0.2)
 
 ### factor scores
 # TODO: play around the rotation method
-fa.res.rot = factanal(x = numerical.data, factors = 4, rotation = "promax", scores = "Bartlett")
+fa.res.rot = factanal(x = numerical.data, factors = 6, rotation = "promax", scores = "Bartlett")
 head(fa.res.rot$scores)
 summary(lm(Factor2 ~ Factor1, data = as.data.frame(fa.res.rot$scores)))
-fa.res.rot.loading  = data.frame(fa.res.rot$loadings[1:19,1:4])
+fa.res.rot.loading  = data.frame(fa.res.rot$loadings[1:19,1:6])
 fa.res.rot.loading$features = rownames(fa.res.rot.loading)
-colnames(fa.res.rot.loading) = c('F1','F2','F3','F4','features')
+colnames(fa.res.rot.loading) = c('F1','F2','F3','F4','F5','F6','features')
 
 # factors
 fa.res.rot.loading
@@ -216,7 +216,7 @@ pc.res = prcomp(numerical.data, scale = TRUE)
 
 # we pick 9 components to explain 80% of variance
 cumsum(pc.res$sdev^2/sum(pc.res$sdev^2))
-pc.loading = data.frame(pc.res$rotation[1:19,1:9])
+pc.loading = data.frame(pc.res$rotation[1:19,1:6])
 
 # principal components
 pc.loading
