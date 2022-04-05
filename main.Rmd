@@ -1,47 +1,40 @@
 ---
-title: "main"
-
+title: "Customer segementation analysis "
 header-includes:
-   - \usepackage{ggplot2}
-   - \usepackage{reshape}
-   - \usepackage{dplyr}
-   - \usepackage{GGally}
-
-header-includes:
-   - \usepackage{ggplot2}
-   - \usepackage{reshape}
-   - \usepackage{dplyr}
-   - \usepackage{GGally}
-   - \usepackage{corrplot}
-    - \usepackage{lubridate}
-    - \usepackage{forcats}
-    - \usepackage{readr}
-    - \usepackage{reshape}
-    - \usepackage{polycor}
-    - \usepackage{EFA.dimensions}
-    - \usepackage{fastICA}
-    - \usepackage{tidyr}
-    - \usepackage{stringr}
-    - \usepackage{grid}
-    - \usepackage{gridExtra}
-    - \usepackage{ica}
-
-
-output: pdf_document
+- \usepackage{ggplot2}
+- \usepackage{reshape}
+- \usepackage{dplyr}
+- \usepackage{GGally}
+- \usepackage{corrplot} 
+- \usepackage{lubridate} 
+- \usepackage{forcats} 
+- \usepackage{readr}
+- \usepackage{reshape} 
+- \usepackage{polycor} 
+- \usepackage{EFA.dimensions} 
+- \usepackage{fastICA}
+- \usepackage{tidyr} 
+- \usepackage{stringr}
+- \usepackage{grid} 
+- \usepackage{gridExtra}
+- \usepackage{ica}
+- \usepackage{factoextra}
+output:
+  html_document:
+    df_print: paged
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = TRUE,fig.width=6, fig.height=6,warning=FALSE)
 ```
 
 # Question
 Download the customer-personality.csv data from Moodle. This dataset contains information of customers that can make the company better understand the behaviour of their customers. Explore the dataset and report any interesting findings.
 
-# Logic of the program
-
-
 # Main Code
-## Import the required libraries
+
+Import the required libraries
 ```{r import all libraries we need}
 library(ggplot2)
 library(reshape)
@@ -60,9 +53,12 @@ library(stringr)
 library(grid)
 library(gridExtra)
 library(ica)
+library(scatterplot3d)
+library(factoextra)
 ```
 
-## Preprocess the data
+## I. Preprocess the data
+
 We are going to preprocess the data as follows:
 
 1. Remove the row with missing values
@@ -106,6 +102,7 @@ str(data.ori)
 ```
 
 ```{r remove the row with missing values}
+
 # check for NA
 sum(is.na(data.ori))
 
@@ -119,6 +116,7 @@ sum(is.na(data.clean))
 ```
 
 ```{r remove the outliers from income and birth year}
+
 # remove outliers from income and birth year
 ## income
 data.clean <- data.clean[!(data.clean$Income >=200000),]
@@ -127,7 +125,8 @@ data.clean <- data.clean[!(data.clean$Income >=200000),]
 data.clean <- data.clean[!(data.clean$Year_Birth <=1901),]
 ```
 
-```{r convert 'Education', 'Marital status', and 'Dt_Customer' variables to categorical variables}
+```{r convert some variables to categorical variables}
+
 # converting 'Education', 'Marital status', and 'Dt_Customer' variables to categorical variables
 ## Education - Creating 3 categories
 data.clean$Education[data.clean$Education == "Basic"] <- "1"
@@ -172,9 +171,10 @@ numerical.data = data.clean[, c(3:21)]#:ncol(data.ori))]
 str(numerical.data)
 ```
 
-## Exploratory Data Analysis
+## II. Exploratory Data Analysis
 We are going to explore the data as follows:
-1. Correlation between the variables
+
+1. Show the orrelation between the variables
 
 2. Plot the histogram
 
@@ -242,7 +242,7 @@ features.order = c("Education", "Marital_Status", "Kidhome", "Teenhome", "Age",
                    "NumCatalogPurchases", "NumStorePurchases", "NumWebVisitsMonth")
 ```
 
-## Dimensionality Reduction
+## III. Dimensionality Reduction
 In this part, we are going to compare the dimensionality reduction techniques (eg. FA, PCA and ICA) and see which one is the best.
 
 ### 1. FA
@@ -251,8 +251,6 @@ Here is the procedure for FA:
 1. Use eigenvalues to find the number of principal components.
 2. Use factanal function to calculate the final result.
 3. Create a new data frame with the selected principal components for heatmap.
-
-
 
 We are not suppose to use Pearson correlation as not all of the variables are numerical. Instead, we should use polychroic correlation. However, because the polychroic correlation is computational expensive, when we apply this algorithm into the data, we will still get the Pearson correlation.
 ```{r get the eigenvalues and eigenvectors and decide the number of components}
@@ -281,30 +279,29 @@ plot(fa.eigen$values, type = "b", ylab = "Eigenvalues", xlab = "Factor") # we ch
 
 ```{r calculate the final result}
 # factor analysis with rotation
-fa.res.rot = factanal(x = numerical.data, factors = 4, rotation = "promax", scores = "Bartlett")
-head(fa.res.rot$scores)
+fa = factanal(x = numerical.data, factors = 4, rotation = "promax", scores = "Bartlett")
+head(fa$scores)
 
 # show the result
-summary(lm(Factor2 ~ Factor1, data = as.data.frame(fa.res.rot$scores)))
-fa.res.rot.loading  = data.frame(fa.res.rot$loadings[1:19,1:4])
-fa.res.rot.loading$features = rownames(fa.res.rot.loading)
-colnames(fa.res.rot.loading) = c('F1','F2','F3','F4','features')
+summary(lm(Factor2 ~ Factor1, data = as.data.frame(fa$scores)))
+fa.loading  = data.frame(fa$loadings[1:19,1:4])
+fa.loading$features = rownames(fa.loading)
+colnames(fa.loading) = c('F1','F2','F3','F4','features')
 ```
 
-```{r select components}
+```{r select components(fa)}
 # create a new data frame with the selected principal components
 # prepare data for heat map
-fa.res.df = melt(fa.res.rot.loading)
-fa.res.df$features = factor(fa.res.df$features, levels = c("Education", "Marital_Status", "Kidhome", "Teenhome", "Age", 
-                                                           "Dt_Customer", "Income", "Recency", "MntWines", "MntFruits", 
-                                                           "MntMeatProducts", "MntFishProducts", "MntSweetProducts",
-                                                           "MntGoldProds", "NumDealsPurchases", "NumWebPurchases", 
-                                                           "NumCatalogPurchases", "NumStorePurchases", "NumWebVisitsMonth"))
+fa.df = melt(fa.loading)
+fa.df$features = factor(fa.df$features, levels = c("Education","Marital_Status","Kidhome","Teenhome", "Age", "Dt_Customer", "Income", "Recency", "MntWines", "MntFruits","MntMeatProducts", "MntFishProducts", "MntSweetProducts","MntGoldProds","NumDealsPurchases", "NumWebPurchases","NumCatalogPurchases", "NumStorePurchases", "NumWebVisitsMonth"))
 ```
 
 ### 2. PCA
+
 1. Apply PCA to the data.
+
 2. Decide the number of principal components.
+
 3. Use the PCA function to calculate the final result.
 
 ```{r apply PCA}
@@ -322,7 +319,7 @@ pc.loading
 ```
 
 
-```{r select components}
+```{r select components(pca)}
 # prepare data for heat map
 pc.loading$features = rownames(pc.loading)
 pr.loading.df = melt(pc.loading)
@@ -335,7 +332,9 @@ pr.loading.df$features = factor(pr.loading.df$features, levels = c("Education", 
 ```
 
 ### 3. ICA
+
 1. Apply ICA to the data.
+
 2. Use the ICA function to calculate the final result.
 
 ```{r apply ICA}
@@ -344,10 +343,10 @@ set.seed(20)
 ica = fastICA(numerical.data, 6, fun = "logcosh", alpha = 1,
                    row.norm = T, maxit = 200,
                    tol = 0.0001, verbose = FALSE)
-
+ica.latent =  ica$S
 ```
 
-```{r select components}
+```{r select components(ica)}
 ica.loading = data.frame(t(ica$A)) %>% 
   rename_with(~ str_glue("IC{seq(.)}")) %>%
   mutate(variable = names(numerical.data)) %>%
@@ -367,7 +366,7 @@ ica.loading$features = factor(ica.loading$features, levels = c("Education", "Mar
 
 ```{r compare the components}
 
-fa.plot = ggplot(fa.res.df, aes(x = variable, y = factor(features, level = features.order), fill = value)) +
+fa.plot = ggplot(fa.df, aes(x = variable, y = factor(features, level = features.order), fill = value)) +
   geom_tile(color = "white",
             lwd = 1.5,
             linetype = 1, show.legend = FALSE) +
@@ -394,7 +393,7 @@ grid.arrange(fa.plot, pr.plot, ica.plot, nrow = 1,
              top=textGrob("Compare loadings among FA, PCA and ICA", gp=gpar(fontsize=15, font = 2)))
 ```
 
-## Clustering
+## IV. Clustering
 We are going to use KMeans clustering to cluster the data after applying ICA.
 1. Select the number of clusters based on the elbow plot.
 2. Apply KMeans clustering to the data.
@@ -412,14 +411,18 @@ We decide to use 4 clusters.
 kmean.model.4 = kmeans(ica.latent, 4, nstart = 10)
 kmean.model.4.cluster = kmean.model.4$cluster
 # Have a brief look at the cluster
-plot(ica.latent[,3],ica.latent[,4],col = kmean.model.4.cluster)
+# define a function to do min max scale
+min.max.scale <- function(x){(x-min(x))/(max(x)-min(x))}
+scatterplot3d(min.max.scale(ica.latent[,1]),min.max.scale(ica.latent[,2]),min.max.scale(ica.latent[,3]),color = kmean.model.4.cluster, main='Clusters in 3 dimensions',xlab ='Dimension 1',ylab= 'Dimension 2', zlab= 'Dimension 3',scale.y = 1)
 ```
 
-## Access the model
+## V. Access the model
 
-We are going to use RFM model to access the model.
+We are going to assess the distribution of these four clusters through two ways.
+1. Use RFM to assess the model.
+2. Assess the model through features.
 
-```{r access the model}
+```{r RFM analysis}
 
 
 rfm.R = data.clean$Recency
@@ -427,8 +430,6 @@ rfm.F = rowSums(data.clean[,16:20])
 rfm.M = rowSums(data.clean[,10:15])
 rfm.income = data.clean$Income
 RFM = data.frame(rfm.R,rfm.F,rfm.M,rfm.income)
-
-min.max.scale <- function(x){(x-min(x))/(max(x)-min(x))}
 
 RFM$rfm.R.scaled = min.max.scale(RFM$rfm.R)
 RFM$rfm.F.scaled = min.max.scale(RFM$rfm.F)
@@ -440,11 +441,35 @@ RFM$cluster = kmean.model.4.cluster
 
 # Label the cluster
 # plot the rfm in different clusters
+# plot the rfm in different clusters
 RFM%>%
   select(cluster, rfm.R.scaled, rfm.F.scaled, rfm.M.scaled,rfm.income.scaled)%>%
   melt(id='cluster')%>%
-  ggplot(aes(as_factor(cluster), value))+
+  ggplot(aes(as_factor(cluster), value, fill=as.factor(cluster)))+
+  scale_fill_manual('Cluster',values=c("#ff8c7a", "#92C5DE", "yellow", "#B8E186"))+
   geom_boxplot()+
-  facet_wrap(~variable, ncol = 4)
+  facet_wrap(~variable, ncol = 4)+
+  labs(x = "Cluster", labs="Cluster")
+```
 
+```{r feature distribution versus clusters}
+# plot the features vs different clusters
+data.scaled <- data.clean
+
+data.scaled <- data.frame(sapply(data.scaled, min.max.scale))
+data.scaled$cluster <- RFM$cluster
+
+data.scaled%>%
+  select(cluster, Age, Kidhome, Teenhome,Education, Marital_Status,
+         MntWines, MntFruits, MntMeatProducts, MntFishProducts, 
+         MntSweetProducts, MntGoldProds, NumDealsPurchases, NumWebPurchases,
+         NumCatalogPurchases, NumStorePurchases, NumWebVisitsMonth)%>%
+  melt(id='cluster')%>%
+  ggplot(aes(as_factor(cluster), value, fill=as.factor(cluster)))+
+  scale_fill_manual(values=c("#ff8c7a", "#92C5DE", "yellow", "#B8E186"))+
+  geom_boxplot()+
+  facet_wrap(~variable, ncol = 4) + 
+  theme_light() +
+  labs(x = "Cluster", fill = "Cluster") +
+  scale_color_manual(name="Cluster",values=c("1","2","3","4"))
 ```
