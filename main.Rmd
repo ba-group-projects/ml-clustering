@@ -80,7 +80,7 @@ We are going to preprocess the data as follows:
     "PhD" <- 3
     
 
-  - Create 2 categories for 'Marital status' based on whether they are alone or not:
+  - Create 2 categories for 'Marital status' based on whether they are single or together:
   
     "Absurd" <- 0
     
@@ -148,7 +148,7 @@ data.clean <- data.clean[!(data.clean$Year_Birth <=1901),]
 ```{r convert some variables to categorical variables}
 
 # converting 'Education', 'Marital status', and 'Dt_Customer' variables to categorical variables
-## Education - Creating 3 categories
+## education - creating 3 categories
 data.clean$Education[data.clean$Education == "Basic"] <- "1"
 data.clean$Education[data.clean$Education == "Graduation"] <- "2"
 data.clean$Education[data.clean$Education == "2n Cycle"] <- "3"
@@ -156,7 +156,7 @@ data.clean$Education[data.clean$Education == "Master"] <- "3"
 data.clean$Education[data.clean$Education == "PhD"] <- "3"
 data.clean$Education <- as.numeric(data.clean$Education)
 
-## Marital Status - Creating 2 categories of Single and together
+## marital Status - creating 2 categories of Single and together
 data.clean$Marital_Status[data.clean$Marital_Status == "Absurd"] <- 0
 data.clean$Marital_Status[data.clean$Marital_Status == "Alone"] <- 0
 data.clean$Marital_Status[data.clean$Marital_Status == "YOLO"] <- 0
@@ -181,7 +181,7 @@ data.clean$Dt_Customer <- as.numeric(levels(data.clean$Dt_Customer))[data.clean$
 ```
 
 ```{r add age variable}
-# Adding Age variable
+# adding Age variable
 data.clean$Age <- (2015 - data.clean$Year_Birth)
 ```
 
@@ -194,7 +194,7 @@ str(numerical.data)
 ## II. Exploratory Data Analysis
 We are going to explore the data as follows:
 
-1. Show the orrelation between the variables
+1. Show the correlation between the variables that have a correlation > ±0.5
 
 2. Plot the histogram
 
@@ -202,30 +202,30 @@ We are going to explore the data as follows:
 ```{r correlation between the variables}
 par(mfrow=c(1,1))
 corr_simple <- function(data=numerical.data,sig=0.5){
-  #convert data to numeric in order to run correlations
-  #convert to factor first to keep the integrity of the data - each value will become a number rather than turn into NA
+  # convert data to numeric in order to run correlations
+  # convert to factor first to keep the integrity of the data - each value will become a number rather than turn into NA
   df_cor <- data %>% mutate_if(is.character, as.factor)
   df_cor <- df_cor %>% mutate_if(is.factor, as.numeric)
-  #run a correlation and drop the insignificant ones
+  # run a correlation and drop the insignificant ones
   corr <- cor(df_cor)
-  #prepare to drop duplicates and correlations of 1     
+  # prepare to drop duplicates and correlations of 1     
   corr[lower.tri(corr,diag=TRUE)] <- NA 
-  #drop perfect correlations
+  # drop perfect correlations
   corr[corr == 1] <- NA 
-  #turn into a 3-column table
+  # turn into a 3-column table
   corr <- as.data.frame(as.table(corr))
-  #remove the NA values from above 
+  # remove the NA values from above 
   corr <- na.omit(corr) 
-  #select significant values  
+  # select significant values  
   corr <- subset(corr, abs(Freq) > sig) 
-  #sort by highest correlation
+  # sort by highest correlation
   corr <- corr[order(-abs(corr$Freq)),] 
-  #print table
+  # print table
   print(corr)
-  #turn corr back into matrix in order to plot with corrplot
+  # turn corr back into matrix in order to plot with corrplot
   mtx_corr <- reshape2::acast(corr, Var1~Var2, value.var="Freq")
   
-  #plot correlations visually
+  # plot correlations visually
   corrplot(mtx_corr, is.corr=T, tl.col="black", method = 'number', na.label=" ", number.cex=0.8 ,tl.cex=0.8)
 }
 corr_simple()
@@ -275,7 +275,7 @@ Here is the procedure for FA:
 
 3. Create a new data frame with the selected principal components for heatmap.
 
-We are not suppose to use Pearson correlation as not all variables are numerical. Instead, we should use polychroic correlation. However, because the polychroic correlation is computational expensive, when we apply this algorithm into the data, we will still get the Pearson correlation.
+We are not supposed to use Pearson correlation as not all variables are numerical. Instead, we should use polychroic correlation. However, because the polychroic correlation is computational expensive, when we apply this algorithm into the data, we will still get the Pearson correlation.
 ```{r get the eigenvalues and eigenvectors and decide the number of components}
 
 # get the polychroic correlation
@@ -321,7 +321,7 @@ fa.df$features = factor(fa.df$features, levels = c("Education","Marital_Status",
 3. Use the PCA function to calculate the final result.
 
 ```{r apply PCA}
-# Apply PCA to data
+# apply PCA to data
 pc.res = prcomp(numerical.data, scale = TRUE)
 pc.res
 
@@ -354,7 +354,7 @@ pr.loading.df$features = factor(pr.loading.df$features, levels = c("Education", 
 2. Use the ICA function to calculate the final result.
 
 ```{r apply ICA}
-# We select 6 since it can capture variables features very well
+# select 6 components since it can capture variables features very well
 set.seed(20)
 ica = fastICA(numerical.data, 6, fun = "logcosh", alpha = 1,
                    row.norm = T, maxit = 200,
@@ -376,7 +376,7 @@ ica.loading$features = factor(ica.loading$features, levels = c("Education", "Mar
                                                               "MntGoldProds", "NumDealsPurchases", "NumWebPurchases", 
                                                               "NumCatalogPurchases", "NumStorePurchases", "NumWebVisitsMonth"))
 
-# Output the loading
+# output the loadings
 t(ica$A)
 ```
 
@@ -430,7 +430,7 @@ We decide to use 4 clusters.
 ```{r apply KMeans}
 kmean.model.4 = kmeans(ica.latent, 4, nstart = 10)
 kmean.model.4.cluster = kmean.model.4$cluster
-# Have a brief look at the cluster
+# have a brief look at the cluster
 # define a function to do min max scale
 min.max.scale <- function(x){(x-min(x))/(max(x)-min(x))}
 scatterplot3d(min.max.scale(ica.latent[,1]),min.max.scale(ica.latent[,2]),min.max.scale(ica.latent[,3]),color = kmean.model.4.cluster, main='Clusters in 3 dimensions',xlab ='Dimension 1',ylab= '', zlab= 'Dimension 3',scale.y = 1)
@@ -447,7 +447,7 @@ We are going to assess the distribution of these four clusters through two ways.
 
 ```{r RFM analysis}
 
-# Create new dataset for RFM
+# create new dataset for RFM
 rfm.R = data.clean$Recency
 rfm.F = rowSums(data.clean[,16:20])
 rfm.M = rowSums(data.clean[,10:15])
@@ -462,7 +462,7 @@ RFM$rfm.income.scaled = min.max.scale(RFM$rfm.income)
 RFM$cluster = kmean.model.4.cluster
 
 
-# Plot RFM with different clusters
+# plot RFM with different clusters
 RFM%>%
   select(cluster, rfm.R.scaled, rfm.F.scaled, rfm.M.scaled,rfm.income.scaled)%>%
   melt(id='cluster')%>%
