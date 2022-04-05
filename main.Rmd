@@ -66,27 +66,47 @@ We are going to preprocess the data as follows:
 2. Remove the outliers from income and birth year
 
 3. Convert 'Education', 'Marital status', and 'Dt_Customer' variables to categorical variables
+
   - Create 3 categories for 'Education':
+  
     "Basic" <- 1
+    
     "Graduation" <- 2
+    
     "2n Cycle" <- 3
+    
     "Master" <- 3
+    
     "PhD" <- 3
+    
 
   - Create 2 categories for 'Marital status' based on whether they are alone or not:
+  
     "Absurd" <- 0
+    
     "Alone" <- 0
+    
     "YOLO" <- 0
+    
     "Single" <- 0
+    
     "Together" <- 1
+    
     "Married" <- 1
+    
     "Divorced" <- 0
+    
     "Widow" <- 0
+    
 
   - Create 3 categories for Dt_Customer by the year they joined
+  
     "2012" <- 1
+    
     "2013" <- 2
+    
     "2014" <- 3
+    
 
 4. Add age variable
 
@@ -248,11 +268,14 @@ In this part, we are going to compare the dimensionality reduction techniques (e
 ### 1. FA
 
 Here is the procedure for FA:
+
 1. Use eigenvalues to find the number of principal components.
+
 2. Use factanal function to calculate the final result.
+
 3. Create a new data frame with the selected principal components for heatmap.
 
-We are not suppose to use Pearson correlation as not all of the variables are numerical. Instead, we should use polychroic correlation. However, because the polychroic correlation is computational expensive, when we apply this algorithm into the data, we will still get the Pearson correlation.
+We are not suppose to use Pearson correlation as not all variables are numerical. Instead, we should use polychroic correlation. However, because the polychroic correlation is computational expensive, when we apply this algorithm into the data, we will still get the Pearson correlation.
 ```{r get the eigenvalues and eigenvectors and decide the number of components}
 
 # get the polychroic correlation
@@ -261,32 +284,25 @@ fa.cor = POLYCHORIC_R(numerical.data)
 # look at eigenvector of the correlation to see how many factors we use
 fa.eigen = eigen(fa.cor)
 fa.eigen$values
-
-# in decreasing values
-# higher = more important
-# rule of thumb to see the number of variables we should use? Do the sum
 sum(fa.eigen$values)
 
 # to select number of factors
-cumsum(fa.eigen$values) / ncol(numerical.data) # Which is 19 here
+cumsum(fa.eigen$values) / ncol(numerical.data)
 
-# seeing this, using the first 4, we can explain 79% of the data
-# draw screen plot for better visualisation
-
-# use the scree plot
-plot(fa.eigen$values, type = "b", ylab = "Eigenvalues", xlab = "Factor") # we choose 4 factors
+# use the scree plot to determine the optimal number of components
+plot(fa.eigen$values, type = "b", ylab = "Eigenvalues", xlab = "Factor") 
 ```
 
 ```{r calculate the final result}
 # factor analysis with rotation
-fa = factanal(x = numerical.data, factors = 4, rotation = "promax", scores = "Bartlett")
+fa = factanal(x = numerical.data, factors = 6, rotation = "promax", scores = "Bartlett")
 head(fa$scores)
 
 # show the result
 summary(lm(Factor2 ~ Factor1, data = as.data.frame(fa$scores)))
-fa.loading  = data.frame(fa$loadings[1:19,1:4])
+fa.loading  = data.frame(fa$loadings[1:19,1:6])
 fa.loading$features = rownames(fa.loading)
-colnames(fa.loading) = c('F1','F2','F3','F4','features')
+colnames(fa.loading) = c('F1','F2','F3','F4', 'F5', 'F6','features')
 ```
 
 ```{r select components(fa)}
@@ -360,7 +376,11 @@ ica.loading$features = factor(ica.loading$features, levels = c("Education", "Mar
                                                               "MntGoldProds", "NumDealsPurchases", "NumWebPurchases", 
                                                               "NumCatalogPurchases", "NumStorePurchases", "NumWebVisitsMonth"))
 
+# Output the loading
+t(ica$A)
 ```
+
+
 
 ### 4. Compare the components of three methods
 
@@ -413,7 +433,10 @@ kmean.model.4.cluster = kmean.model.4$cluster
 # Have a brief look at the cluster
 # define a function to do min max scale
 min.max.scale <- function(x){(x-min(x))/(max(x)-min(x))}
-scatterplot3d(min.max.scale(ica.latent[,1]),min.max.scale(ica.latent[,2]),min.max.scale(ica.latent[,3]),color = kmean.model.4.cluster, main='Clusters in 3 dimensions',xlab ='Dimension 1',ylab= 'Dimension 2', zlab= 'Dimension 3',scale.y = 1)
+scatterplot3d(min.max.scale(ica.latent[,1]),min.max.scale(ica.latent[,2]),min.max.scale(ica.latent[,3]),color = kmean.model.4.cluster, main='Clusters in 3 dimensions',xlab ='Dimension 1',ylab= '', zlab= 'Dimension 3',scale.y = 1)
+
+
+text(x = 7.5, y = 0.5, "Dimension 2", srt = 45)
 ```
 
 ## V. Access the model
@@ -424,7 +447,7 @@ We are going to assess the distribution of these four clusters through two ways.
 
 ```{r RFM analysis}
 
-
+# Create new dataset for RFM
 rfm.R = data.clean$Recency
 rfm.F = rowSums(data.clean[,16:20])
 rfm.M = rowSums(data.clean[,10:15])
@@ -439,9 +462,7 @@ RFM$rfm.income.scaled = min.max.scale(RFM$rfm.income)
 RFM$cluster = kmean.model.4.cluster
 
 
-# Label the cluster
-# plot the rfm in different clusters
-# plot the rfm in different clusters
+# Plot RFM with different clusters
 RFM%>%
   select(cluster, rfm.R.scaled, rfm.F.scaled, rfm.M.scaled,rfm.income.scaled)%>%
   melt(id='cluster')%>%
